@@ -49,7 +49,9 @@ Then, you can find all the date or time interval instances within an input strin
       'start': 44,
       'text': 'next week'}]
 
-Note that the example above has 3 types of identified instances: a datetime. I'll add more details about this soon.
+Note that the example above has 3 types of identified instances: a datetime with timezone, a datetime without timezone, and a time interval.
+
+I'll add more details about this soon.
 
 
 Changelog
