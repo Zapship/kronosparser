@@ -12,7 +12,7 @@ it by using `pip install` directly from the Github repository, as shown below,
 
 ::
 
-    pip install git+https://github.com/zapship/kronosparser.git
+    pip install git+https://github.com/Zapship/kronosparser.git
 
 
 Usage
