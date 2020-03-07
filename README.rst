@@ -21,6 +21,7 @@ Usage
 First, you need to import both the grammar that defines the parser (in this case `delta_time`) and the `find_all` helper.
 
 .. code:: python
+
     from kronosparser import delta_time
     from kronosparser.utils import find_all
 
