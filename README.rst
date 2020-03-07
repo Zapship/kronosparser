@@ -11,6 +11,7 @@ In the meantime, while I finish adding this as a `pypi` package, you can install
 it by using `pip install` directly from the Github repository, as shown below,
 
 ::
+
     pip install git+https://github.com/zapship/kronosparser.git
 
 
@@ -26,6 +27,7 @@ First, you need to import both the grammar that defines the parser (in this case
 Then, you can find all the date or time interval instances within an input string, for example:
 
 ::
+
     >>> from pprint import pprint
     >>> from kronosparser import delta_time
     >>> from kronosparser.utils import find_all
