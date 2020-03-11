@@ -94,9 +94,8 @@ def tz_decorate(key, rel_hour=0):
     return tz_decorator
 
 
-def before_after_any(tokens):
+def _setup_start(tokens):
     start = None
-    end = None
     for start_type in ['exclusive_start', 'inclusive_start']:
         if start_type in tokens:
             if 'future' in tokens[start_type]:
@@ -107,10 +106,15 @@ def before_after_any(tokens):
                 start = start.get_end()
                 if start is None:
                     tokens['datetime_parsing_error'] = True
-                    return
+                    return None
             if isinstance(start, datetime.date) and start_type == 'exclusive_start':
                 start += datetime.timedelta(days=1)
             break
+    return start
+
+
+def _setup_end(tokens):
+    end = None
     for end_type in ['exclusive_end', 'inclusive_end']:
         if end_type in tokens:
             if 'future' in tokens[end_type]:
@@ -122,14 +126,21 @@ def before_after_any(tokens):
                 end = end.get_start()
                 if end is None:
                     tokens['datetime_parsing_error'] = True
-                    return
+                    return None
             if isinstance(end, datetime.date) and end_type == 'exclusive_end':
                 end -= datetime.timedelta(1)
             break
+    return end
+
+
+def before_after_any(tokens):
+    start = _setup_start(tokens)
+    end = _setup_end(tokens)
     if 'past' in tokens:
         del tokens['past']
         del tokens['future']
-    tokens['calculatedTime'] = TimeInterval(start, end)
+    if start and end:
+        tokens['calculatedTime'] = TimeInterval(start, end)
 
 
 def set_datetime(tokens):
@@ -138,8 +149,7 @@ def set_datetime(tokens):
             'past': set_datetime_single(tokens['past']),
             'future': set_datetime_single(tokens['future'])
         }
-    else:
-        return set_datetime_single(tokens)
+    return set_datetime_single(tokens)
 
 
 def set_datetime_single(tokens):
@@ -175,8 +185,7 @@ def process_two_digits_year(tokens):
     two_digit_token = int(tokens[0])
     if two_digit_token > _CENTURY_CHANGE:  # TODO: Will break after singularity!
         return 1900 + two_digit_token
-    else:
-        return 2000 + two_digit_token
+    return 2000 + two_digit_token
 
 
 def is_leap_year(y):
@@ -191,12 +200,11 @@ def quarter_by_date(origin=None):
     origin = origin or utc_today()
     if origin.month < 4:
         return 1
-    elif origin.month < 7:
+    if origin.month < 7:
         return 2
-    elif origin.month < 10:
+    if origin.month < 10:
         return 3
-    else:
-        return 4
+    return 4
 
 
 def quarter_interval(quarter_num, year_num):
@@ -245,13 +253,13 @@ def convert_to_day(tokens, origin=None):
         else:
             day_diff = diff if diff < 0 else diff - 7
         return origin + datetime.timedelta(days=day_diff)
-    else:
-        name = tokens.name.lower()
-        return {
-            'today': origin,
-            'yesterday': origin + datetime.timedelta(days=-1),
-            'tomorrow': origin + datetime.timedelta(days=1),
-        }[name]
+
+    name = tokens.name.lower()
+    return {
+        'today': origin,
+        'yesterday': origin + datetime.timedelta(days=-1),
+        'tomorrow': origin + datetime.timedelta(days=1),
+    }[name]
 
 
 @tz_decorate('date')
@@ -382,8 +390,7 @@ def day_number_mapping(day_str):
     day_str = day_str.lower()
     if day_str in d:
         return d[day_str]
-    else:
-        return int(day_str)
+    return int(day_str)
 
 
 def weekday_number_mapping(weekday_str):
@@ -540,26 +547,24 @@ def half_of_action(tokens):
 
 
 @tz_decorate('calculatedTime', rel_hour=8)
-def asap_action(tokens, origin=None):
+def asap_action(_, origin=None):
     calc = datetime.datetime(origin.year, origin.month, origin.day) + datetime.timedelta(hours=8)
     return calc + (datetime.timedelta(days=1) if utc_now().hour >= 8 else datetime.timedelta(
         days=0))
 
 
-# TODO: set an interval timezone decoration
-def interval_year_action(tokens):
+def interval_year_action(tokens):  # TODO: set an interval timezone decoration
     origin = utc_today()
     if 'dir_rel' in tokens:
         calc_time = year_interval(origin.year + tokens.dir_rel)
     elif 1900 < int(tokens.get('year', 0)) - _CENTURY_CHANGE <= 2000:
         calc_time = year_interval(int(tokens.year))
     else:
-        return None
+        return
     tokens['calculatedTime'] = calc_time
 
 
-# TODO: set an interval timezone decoration
-def interval_quarter_action(tokens, origin=None):
+def interval_quarter_action(tokens, origin=None):  # TODO: set an interval timezone decoration
     if origin is None:
         origin = utc_today()
     if 'dir_rel' in tokens:
@@ -569,7 +574,7 @@ def interval_quarter_action(tokens, origin=None):
         calc_time = quarter_interval(quarter_mapping(tokens.quarter),
                                      int(tokens.get('year', origin.year)))
     else:
-        return None
+        return
     tokens['calculatedTime'] = calc_time
 
 
@@ -584,7 +589,7 @@ def interval_month_action(tokens):
         calc_time = month_interval(month_mapping(tokens.month), int(tokens.get('year',
                                                                                origin.year)))
     else:
-        return None
+        return
     tokens['calculatedTime'] = calc_time
 
 
@@ -632,12 +637,11 @@ def named_day_action(tokens, origin=None):
             parsed_time = utc_now().time()
     else:
         parsed_time = None
-    if parsed_time is not None and day is not None:
-        return datetime.datetime.combine(day + delta, parsed_time)
-    elif parsed_time is not None:
+    if parsed_time is not None:
+        if day is not None:
+            return datetime.datetime.combine(day + delta, parsed_time)
         return parsed_time + delta
-    else:
-        return day + delta
+    return day + delta
 
 
 @tz_decorate('calculatedTime')
@@ -654,13 +658,9 @@ def am_pm_time_to_full(tokens):
 
 def o_clock_time_to_full(tokens):
     tokens['hour'] = int(tokens['hour']) % 12
-    # Assumption: o'clock times between 7-18
-    if tokens['hour'] < 7:
+    if tokens['hour'] < 7:  # Assumption: o'clock times between 7-18
         tokens['hour'] += 12
     return tokens
-
-
-# TODO: refactor by placing all previous methods into different files (actions and time_utils).
 
 # Grammar used to parse different times is defined below
 
@@ -724,7 +724,8 @@ hour_ = utils.pluralize('hour', pyparsing_regex=True)
 minute_ = utils.pluralize('minute', pyparsing_regex=True)
 _second_ = utils.pluralize('second', pyparsing_regex=True)
 
-# TODO: Use some NLP tool to disambiguate some months (e.g. `may` verb or noun) if this causes any issues
+# TODO: Use some NLP tool to disambiguate some months (e.g. `may` verb or noun)
+#  if this causes any issues
 months = pyparsing.Regex(
     r'\b('
     r'jan(uary|\.)?'
@@ -741,7 +742,8 @@ months = pyparsing.Regex(
     r'|dec(ember|\.)?'
     r')\b', re.IGNORECASE)
 
-# TODO: Use some NLP tool to disambiguate some months (e.g. `may` verb or noun) if this causes any issues
+# TODO: Use some NLP tool to disambiguate some months (e.g. `may` verb or noun)
+#  if this causes any issues
 months_no_spaces = pyparsing.Regex(
     r'('
     r'jan(uary|\.)?'

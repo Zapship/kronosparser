@@ -7,7 +7,7 @@ def find_all(expression, text):
     matches = []
     if expression is not None:
         for match in expression.scanString(text):
-            # TODO(RA, 05-10-2016): find a method to prevent suppressed ParseResults objects from ever being created
+            # TODO(RA, 05-10-2016): prevent suppressed ParseResults objects from ever being created
             if len(match[0]) > 0:
                 matches.append({
                     'text': text[match[1]:match[2]],
@@ -24,7 +24,7 @@ def caseless_literal_or(values):
 
 
 def _is_alphanumeric(value):
-    return re.match('\w', value) is not None
+    return re.match(r'\w', value) is not None
 
 
 def caseless_keyword(kw):
@@ -52,8 +52,7 @@ def pluralize(words, pyparsing_regex=False):
         words = [words]
     if pyparsing_regex:
         return caseless_keyword_or(words + [plural(word) for word in words])
-    else:
-        return words + [plural(word) for word in words]
+    return words + [plural(word) for word in words]
 
 
 def plural(noun):
@@ -62,7 +61,7 @@ def plural(noun):
             return noun + 's'
         return noun[:-1] + 'ies'
     if noun[-1] == 'f' and noun[-2] != 'f' and not all(
-        [letter in 'aeiou' for letter in noun[-3:-1]]):
+            [letter in 'aeiou' for letter in noun[-3:-1]]):
         return noun[:-1] + 'ves'
     if noun[-2:] == 'fe' and not all([letter in 'aeiou' for letter in noun[-4:-2]]):
         return noun[:-2] + 'ves'
