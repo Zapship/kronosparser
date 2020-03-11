@@ -3,6 +3,8 @@ kronosparser
 
 Parse any type of time instance from text and translate it into a date, datetime, or time interval. This could be for either future dates or past dates, and you can set the timezone if available.
 
+This package is based on a grammar defined using ``pyparsing``. If you have any comments feel free to create issues or send pull requests. 
+
 
 Install
 -------
@@ -84,6 +86,28 @@ Other examples:
 
 
 Note that if you don't define the ``timezone``, it will use ``US/Pacific`` by default. Also, is no parameters are specified, it will use ``future`` as ``False`` and ``interval_to_date`` as ``True``.
+
+
+Development 
+===========
+
+To contribute, please install the ``requirements_dev.txt`` available with the package, modify the code and send a pull request. You can run the unit tests by using ``nose``,
+
+:: 
+
+    nosetests 
+    
+    
+Also, I highly encourage to use ``pylint`` and ``yapf`` for formatting, 
+
+::
+
+    yapf -vv -pri ./kronosparser
+    pylint -j 4 --rcfile=.pylintrc kronosparser/*
+    isort --apply ./kronosparser
+
+
+Remember to run this in the ``tests`` folder as well. ``mypy`` will be added in the future. 
 
 
 Changelog
