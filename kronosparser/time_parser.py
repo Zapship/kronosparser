@@ -40,6 +40,7 @@ def past_future_wrap(func):
                     tokens[tag]['tz_threshold'] = toks['tz_threshold']
         else:
             func(tokens, origin=origin)
+
     return decorated_func
 
 
@@ -58,6 +59,7 @@ def past_future_unwrap(func):
                     tokens[time_key][key] = val
         else:
             func(tokens)
+
     return decorated_func
 
 
@@ -86,7 +88,9 @@ def tz_decorate(key, rel_hour=0):
             else:
                 tokens['datetime_parsing_error'] = True
                 return
+
         return decorated_func
+
     return tz_decorator
 
 
@@ -157,7 +161,8 @@ def set_datetime_single(tokens):
         else:
             result['days_delta'] = -1
             result['tz_threshold'] = -utc_now().hour - 1
-        result['datetime'] = datetime.datetime.combine(utc_today(), tokens['calculatedTime']).isoformat(' ')
+        result['datetime'] = datetime.datetime.combine(utc_today(),
+                                                       tokens['calculatedTime']).isoformat(' ')
     elif isinstance(tokens['calculatedTime'], TimeInterval):
         result['interval'] = {
             'start': tokens['calculatedTime'].get_start().isoformat(),
@@ -205,12 +210,13 @@ def quarter_interval(quarter_num, year_num):
 
 
 def month_days(month_num, year_num):
-    return [None, 31, 29 if is_leap_year(year_num) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month_num]
+    return [None, 31, 29 if is_leap_year(year_num) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30,
+            31][month_num]
 
 
 def month_interval(month_num, year_num):
     return TimeInterval(datetime.date(year_num, month_num, 1),
-                         datetime.date(year_num, month_num, month_days(month_num, year_num)))
+                        datetime.date(year_num, month_num, month_days(month_num, year_num)))
 
 
 def convert_to_timedelta(tokens):
@@ -275,12 +281,13 @@ def convert_to_interval(tokens):
         end = datetime.datetime.combine(origin, datetime.time(18))
     elif unit == 'week':
         weekday = origin.weekday()
-        start = origin + datetime.timedelta(days=-weekday+7*dir_tok)
-        end = origin + datetime.timedelta(days=6-weekday+7*dir_tok)
+        start = origin + datetime.timedelta(days=-weekday + 7 * dir_tok)
+        end = origin + datetime.timedelta(days=6 - weekday + 7 * dir_tok)
     elif unit == 'month':
         rel_date = origin + relativedelta(months=dir_tok)
         start = datetime.date(rel_date.year, rel_date.month, 1)
-        end = datetime.date(rel_date.year, rel_date.month, month_days(rel_date.month, rel_date.year))
+        end = datetime.date(rel_date.year, rel_date.month, month_days(rel_date.month,
+                                                                      rel_date.year))
         if 'day' in tokens:
             _day = day_number_mapping(tokens.day)
             if _day <= month_days(rel_date.month, rel_date.year):
@@ -535,7 +542,8 @@ def half_of_action(tokens):
 @tz_decorate('calculatedTime', rel_hour=8)
 def asap_action(tokens, origin=None):
     calc = datetime.datetime(origin.year, origin.month, origin.day) + datetime.timedelta(hours=8)
-    return calc + (datetime.timedelta(days=1) if utc_now().hour >= 8 else datetime.timedelta(days=0))
+    return calc + (datetime.timedelta(days=1) if utc_now().hour >= 8 else datetime.timedelta(
+        days=0))
 
 
 # TODO: set an interval timezone decoration
@@ -558,7 +566,8 @@ def interval_quarter_action(tokens, origin=None):
         rel_date = origin + relativedelta(months=3 * tokens.dir_rel)
         calc_time = quarter_interval(quarter_by_date(origin=rel_date), rel_date.year)
     elif 'quarter' in tokens:
-        calc_time = quarter_interval(quarter_mapping(tokens.quarter), int(tokens.get('year', origin.year)))
+        calc_time = quarter_interval(quarter_mapping(tokens.quarter),
+                                     int(tokens.get('year', origin.year)))
     else:
         return None
     tokens['calculatedTime'] = calc_time
@@ -572,7 +581,8 @@ def interval_month_action(tokens):
         rel_date = origin + relativedelta(months=tokens.dir_rel)
         calc_time = month_interval(rel_date.month, rel_date.year)
     elif 'month' in tokens:
-        calc_time = month_interval(month_mapping(tokens.month), int(tokens.get('year', origin.year)))
+        calc_time = month_interval(month_mapping(tokens.month), int(tokens.get('year',
+                                                                               origin.year)))
     else:
         return None
     tokens['calculatedTime'] = calc_time
@@ -668,15 +678,23 @@ time_ = utils.caseless_keyword('time')
 o_clock = utils.caseless_keyword_or(['o\'clock', 'oclock', 'o clock'])
 between_ = utils.caseless_keyword('between')
 
-in_ = utils.caseless_keyword('in').setParseAction(pyparsing.replaceWith(1)).setResultsName('dir_abs')
-from_ = utils.caseless_keyword('from').setParseAction(pyparsing.replaceWith(1)).setResultsName('dir_abs')
-before_ = utils.caseless_keyword('before').setParseAction(pyparsing.replaceWith(-1)).setResultsName('dir_abs')
-after_ = utils.caseless_keyword('after').setParseAction(pyparsing.replaceWith(1)).setResultsName('dir_abs')
-ago_ = utils.caseless_keyword('ago').setParseAction(pyparsing.replaceWith(-1)).setResultsName('dir_abs')
+in_ = utils.caseless_keyword('in').setParseAction(
+    pyparsing.replaceWith(1)).setResultsName('dir_abs')
+from_ = utils.caseless_keyword('from').setParseAction(
+    pyparsing.replaceWith(1)).setResultsName('dir_abs')
+before_ = utils.caseless_keyword('before').setParseAction(
+    pyparsing.replaceWith(-1)).setResultsName('dir_abs')
+after_ = utils.caseless_keyword('after').setParseAction(
+    pyparsing.replaceWith(1)).setResultsName('dir_abs')
+ago_ = utils.caseless_keyword('ago').setParseAction(
+    pyparsing.replaceWith(-1)).setResultsName('dir_abs')
 
-next_ = utils.caseless_keyword('next').setParseAction(pyparsing.replaceWith(1)).setResultsName('dir_rel')
-last_ = utils.caseless_keyword('last').setParseAction(pyparsing.replaceWith(-1)).setResultsName('dir_rel')
-this_ = utils.caseless_keyword('this').setParseAction(pyparsing.replaceWith(0)).setResultsName('dir_rel')
+next_ = utils.caseless_keyword('next').setParseAction(
+    pyparsing.replaceWith(1)).setResultsName('dir_rel')
+last_ = utils.caseless_keyword('last').setParseAction(
+    pyparsing.replaceWith(-1)).setResultsName('dir_rel')
+this_ = utils.caseless_keyword('this').setParseAction(
+    pyparsing.replaceWith(0)).setResultsName('dir_rel')
 
 noon_ = utils.caseless_keyword('noon')
 midnight_ = utils.caseless_keyword('midnight')
@@ -687,7 +705,8 @@ sunrise = utils.caseless_keyword('sunrise').setParseAction(lambda tokens: dateti
 morning = utils.caseless_keyword('morning').setParseAction(lambda tokens: datetime.time(9))
 AM = pyparsing.Regex(r'a(\. ?)?m\.?', re.IGNORECASE).setParseAction(lambda tokens: datetime.time(9))
 afternoon = utils.caseless_keyword('afternoon').setParseAction(lambda tokens: datetime.time(14))
-PM = pyparsing.Regex(r'p(\. ?)?m\.?', re.IGNORECASE).setParseAction(lambda tokens: datetime.time(14))
+PM = pyparsing.Regex(r'p(\. ?)?m\.?',
+                     re.IGNORECASE).setParseAction(lambda tokens: datetime.time(14))
 dusk = utils.caseless_keyword('dusk').setParseAction(lambda tokens: datetime.time(17))
 sunset = utils.caseless_keyword('sunset').setParseAction(lambda tokens: datetime.time(18))
 eod = utils.caseless_keyword('eod').setParseAction(lambda tokens: datetime.time(18))
@@ -720,8 +739,7 @@ months = pyparsing.Regex(
     r'|oct(ober|\.)?'
     r'|nov(ember|\.)?'
     r'|dec(ember|\.)?'
-    r')\b',
-    re.IGNORECASE)
+    r')\b', re.IGNORECASE)
 
 # TODO: Use some NLP tool to disambiguate some months (e.g. `may` verb or noun) if this causes any issues
 months_no_spaces = pyparsing.Regex(
@@ -738,8 +756,7 @@ months_no_spaces = pyparsing.Regex(
     r'|oct(ober|\.)?'
     r'|nov(ember|\.)?'
     r'|dec(ember|\.)?'
-    r')\b',
-    re.IGNORECASE)
+    r')\b', re.IGNORECASE)
 
 day_name = pyparsing.Regex(
     r'\b('
@@ -750,8 +767,7 @@ day_name = pyparsing.Regex(
     r'|fri(day|\.)?'
     r'|sat(urday|\.)?'
     r'|sun(day|\.)?'
-    r')\b',
-    re.IGNORECASE)
+    r')\b', re.IGNORECASE)
 day_name = day_name.setResultsName('day_name')
 
 ordinal_day = pyparsing.Regex(r'\b('
@@ -799,13 +815,14 @@ date_ymd = year4\
            + day_spec
 
 date_mdy = pyparsing.MatchFirst([
-    month + date_sep + Optional(the_) + day_spec + Optional(year_sep + year + pyparsing.NotAny(':')),
-    integer_month_two_digits_no_trailing_space('month') + integer_day_two_digits_no_leading_space('day')
+    month + date_sep + Optional(the_) + day_spec +
+    Optional(year_sep + year + pyparsing.NotAny(':')),
+    integer_month_two_digits_no_trailing_space('month') +
+    integer_day_two_digits_no_leading_space('day')
 ])
 
-ignore_date_ydm = year4 + pyparsing.MatchFirst([
-    SEP_SYM + day_spec + SEP_SYM for SEP_SYM in date_separators
-]) + month
+ignore_date_ydm = year4 + pyparsing.MatchFirst(
+    [SEP_SYM + day_spec + SEP_SYM for SEP_SYM in date_separators]) + month
 
 date_day_month = pyparsing.MatchFirst([
     day_spec + Optional(of_dash_) + month,
@@ -813,11 +830,7 @@ date_day_month = pyparsing.MatchFirst([
 ])
 
 date = pyparsing.MatchFirst([
-    Optional(day_name + Optional(',')) + pyparsing.MatchFirst([
-        date_ymd,
-        date_mdy,
-        date_day_month
-    ]),
+    Optional(day_name + Optional(',')) + pyparsing.MatchFirst([date_ymd, date_mdy, date_day_month]),
     date_day
 ])
 date.setParseAction(convert_to_date)
@@ -830,8 +843,8 @@ weekday_ref = weekday_ref.setResultsName('weekday_ref')
 day_ref = named_day | weekday_ref
 day_ref.setParseAction(convert_to_day)
 
-part_of_day = pyparsing.MatchFirst([
-    morning, dawn, sunrise, AM, afternoon, PM, dusk, sunset, evening, eod, night])
+part_of_day = pyparsing.MatchFirst(
+    [morning, dawn, sunrise, AM, afternoon, PM, dusk, sunset, evening, eod, night])
 part_of_day = part_of_day.setResultsName('part_of_day')
 
 full_hours = pyparsing.Regex(r'\b(2[0-3]|(1|0?)[0-9])').setResultsName('hour')
@@ -843,41 +856,27 @@ am = pyparsing.Regex(r'a(\. ?)?m\.?\b', re.IGNORECASE).setResultsName('am')
 pm = pyparsing.Regex(r'p(\. ?)?m\.?\b', re.IGNORECASE).setResultsName('pm')
 
 timezone = utils.caseless_keyword_or([
-    'Eastern', 'Central', 'Mountain', 'Pacific',
-    'EST', 'CST', 'MST', 'PST',
-    'EDT', 'CDT', 'MDT', 'PDT',
-    'ET', 'CT', 'MT', 'PT'
+    'Eastern', 'Central', 'Mountain', 'Pacific', 'EST', 'CST', 'MST', 'PST', 'EDT', 'CDT', 'MDT',
+    'PDT', 'ET', 'CT', 'MT', 'PT'
 ])
 
-
 full_time = full_hours + ':' + minutes + Optional(':' + seconds)
-am_pm_time = am_pm_hours + Optional(':' + minutes + Optional(':' + seconds)) + pyparsing.MatchFirst([am, pm])
+am_pm_time = am_pm_hours + Optional(':' + minutes + Optional(':' + seconds)) + pyparsing.MatchFirst(
+    [am, pm])
 am_pm_time.setParseAction(am_pm_time_to_full)
 o_clock_time = am_pm_hours + o_clock
 o_clock_time.setParseAction(o_clock_time_to_full)
 
-hms_time = Optional(at_) + pyparsing.MatchFirst([o_clock_time, am_pm_time, full_time]) + Optional(timezone)
+hms_time = Optional(at_) + pyparsing.MatchFirst([o_clock_time, am_pm_time, full_time
+                                                 ]) + Optional(timezone)
 
 this_time = (this_ + time_).setResultsName('this_time')
 
 time_of_day = pyparsing.MatchFirst([
-    Optional(at_ | around_).suppress() + pyparsing.MatchFirst([
-        this_time,
-        hms_time,
-        noon_,
-        midnight_,
-        dusk,
-        dawn,
-        sunrise,
-        sunset,
-        night
-    ]),
-    Optional(Optional(in_) + the_).suppress() + pyparsing.MatchFirst([
-        morning,
-        afternoon,
-        evening,
-        night
-    ]),
+    Optional(at_ | around_).suppress() + pyparsing.MatchFirst(
+        [this_time, hms_time, noon_, midnight_, dusk, dawn, sunrise, sunset, night]),
+    Optional(Optional(in_) + the_).suppress() +
+    pyparsing.MatchFirst([morning, afternoon, evening, night]),
     Optional(by_).suppress() + eod
 ])
 time_of_day = time_of_day.setResultsName('time_of_day')
@@ -902,7 +901,8 @@ named_day_date_spec = pyparsing.MatchFirst([
 named_day_date_spec.setParseAction(named_day_action)
 
 last_this_next_interval = pyparsing.MatchFirst([
-    Optional(Optional(the_) + day_spec('day') + of_) + (last_ | this_ | next_) + (week_ | month_)('time_unit'),
+    Optional(Optional(the_) + day_spec('day') + of_) + (last_ | this_ | next_) +
+    (week_ | month_)('time_unit'),
     Optional(months('month')) + (last_ | this_ | next_) + year_('time_unit')
 ])
 last_this_next_interval.setParseAction(convert_to_interval)
@@ -915,7 +915,8 @@ datetime_spec = Optional(last_this_next_interval) \
                 ])
 datetime_spec.setParseAction(convert_to_abs_time, calculate_time)
 
-rel_time_spec = Optional(in_) + qty + relative_datetime_unit + (from_ | before_ | after_) + datetime_spec
+rel_time_spec = Optional(in_) + qty + relative_datetime_unit + (from_ | before_
+                                                                | after_) + datetime_spec
 rel_time_spec.setParseAction(convert_to_timedelta, calculate_time)
 
 last_this_next_part_of_day = pyparsing.MatchFirst([
@@ -945,11 +946,7 @@ interval_month.setParseAction(interval_month_action)
 
 this_placeholder = pyparsing.Empty()('dir_rel').setParseAction(lambda: 0)
 interval = pyparsing.MatchFirst([
-    interval_month,
-    interval_quarter,
-    interval_year,
-    last_this_next_interval,
-    named_day,
+    interval_month, interval_quarter, interval_year, last_this_next_interval, named_day,
     (this_placeholder + relative_date_unit)('calculatedTime').setParseAction(convert_to_interval)
 ])
 
@@ -969,16 +966,20 @@ asap.setParseAction(asap_action)
 
 before_after_datetime_object = pyparsing.MatchFirst([
     (between_ + datetime_spec)('inclusive_start') + (and_ + datetime_spec)('inclusive_end'),
-    (Optional(from_) + datetime_spec)('inclusive_start') + (to_dash_ + datetime_spec)('inclusive_end'),
-    (after_ + datetime_spec)('exclusive_start') + Optional((before_ + datetime_spec)('exclusive_end')),
-    (before_ + datetime_spec)('exclusive_end') + Optional((after_ + datetime_spec)('exclusive_start')),
+    (Optional(from_) + datetime_spec)('inclusive_start') +
+    (to_dash_ + datetime_spec)('inclusive_end'),
+    (after_ + datetime_spec)('exclusive_start') + Optional(
+        (before_ + datetime_spec)('exclusive_end')),
+    (before_ + datetime_spec)('exclusive_end') + Optional(
+        (after_ + datetime_spec)('exclusive_start')),
 ])
 before_after_datetime_object.setParseAction(before_after_any)
 
 ignore_greetings = 'good' + (morning | afternoon | evening | night)
 
 delta_time = pyparsing.MatchFirst([
-    ignore_greetings.suppress(),  # Allows multiple refactors related to morning/afternoon/evening/night keywords
+    ignore_greetings.suppress(
+    ),  # Allows multiple refactors related to morning/afternoon/evening/night keywords
     beginning_end_of,
     half_of,
     before_after_datetime_object,

@@ -13,7 +13,8 @@ from kronosparser import utils
 
 def make_entity(definitions):
     sorted_keys = sorted(definitions, key=len, reverse=True)
-    return utils.caseless_keyword_or(sorted_keys).setParseAction(lambda x: definitions[x[0].lower()])
+    return utils.caseless_keyword_or(sorted_keys).setParseAction(
+        lambda x: definitions[x[0].lower()])
 
 
 unit_definitions = {
@@ -45,7 +46,7 @@ tens_definitions = {
     'twenty': 20,
     'thirty': 30,
     'forty': 40,
-    'fourty': 40, # for the spelling-challenged...
+    'fourty': 40,  # for the spelling-challenged...
     'fifty': 50,
     'sixty': 60,
     'seventy': 70,
@@ -83,24 +84,13 @@ def mul(values):
 
 hundred_part = (pyparsing.Optional(units) + hundreds).setParseAction(mul)
 
-tens_units = pyparsing.MatchFirst(
-    [
-        (tens + units).setParseAction(sum),
-        tens,
-        units
-    ])
-num_part = pyparsing.MatchFirst(
-    [
-        pyparsing.Optional(hundred_part) + tens_units,
-        hundred_part
-    ]).setParseAction(sum)
+tens_units = pyparsing.MatchFirst([(tens + units).setParseAction(sum), tens, units])
+num_part = pyparsing.MatchFirst([pyparsing.Optional(hundred_part) + tens_units,
+                                 hundred_part]).setParseAction(sum)
 
 word_number = pyparsing.OneOrMore(
-    pyparsing.MatchFirst([
-        num_part + pyparsing.Optional(major),
-        major
-    ]).setParseAction(mul)
-).setParseAction(lambda t: {'int': sum(t)})
+    pyparsing.MatchFirst([num_part + pyparsing.Optional(major),
+                          major]).setParseAction(mul)).setParseAction(lambda t: {'int': sum(t)})
 word_number.ignore(pyparsing.Literal('-'))
 word_number.ignore(pyparsing.Literal(','))
 word_number.ignore(pyparsing.CaselessKeyword('and'))

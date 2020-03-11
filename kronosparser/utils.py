@@ -18,41 +18,9 @@ def find_all(expression, text):
     return matches
 
 
-def final_action(original_text, location, tokens):
-    start = tokens[0].locn_start
-    end = tokens[0].locn_end
-    matched_text = str(original_text)[start:end]
-    lstripped_match = matched_text.lstrip()
-    start += len(matched_text) - len(lstripped_match)
-    stripped_match = lstripped_match.rstrip()
-    end -= len(lstripped_match) - len(stripped_match)
-
-    return {'text': stripped_match, 'start': start, 'end': end, 'parsed': tokens[0].value}
-
-
-def include_match(expression):
-    new_expression = pyparsing.locatedExpr(expression)
-    new_expression.addParseAction(final_action)
-    return new_expression
-
-
-def merge_dicts(values):
-    result = {}
-    for value in values:
-        result.update(value)
-    return result
-
-
 def caseless_literal_or(values):
     sorted_values = sorted(values, key=lambda x: (-len(x), x))
-    return pyparsing.Regex(
-        '|'.join(re.escape(value) for value in sorted_values), re.IGNORECASE)
-
-
-def caseless_keyword_with_boundary_or(values):
-    sorted_values = sorted(values, key=lambda x: (-len(x), x))
-    pattern = r'|'.join(r'\b{}\b'.format(re.escape(value)) for value in sorted_values)
-    return pyparsing.Regex(pattern, re.IGNORECASE)
+    return pyparsing.Regex('|'.join(re.escape(value) for value in sorted_values), re.IGNORECASE)
 
 
 def _is_alphanumeric(value):
@@ -93,7 +61,8 @@ def plural(noun):
         if noun[-2] in 'aeiou':
             return noun + 's'
         return noun[:-1] + 'ies'
-    if noun[-1] == 'f' and noun[-2] != 'f' and not all([letter in 'aeiou' for letter in noun[-3:-1]]):
+    if noun[-1] == 'f' and noun[-2] != 'f' and not all(
+        [letter in 'aeiou' for letter in noun[-3:-1]]):
         return noun[:-1] + 'ves'
     if noun[-2:] == 'fe' and not all([letter in 'aeiou' for letter in noun[-4:-2]]):
         return noun[:-2] + 'ves'
