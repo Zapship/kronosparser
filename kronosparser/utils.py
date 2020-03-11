@@ -1,6 +1,9 @@
 import re
+from datetime import datetime, timedelta
 
 import pyparsing
+import pytz
+from dateutil import parser as date_parser
 
 
 def find_all(expression, text):
@@ -75,3 +78,72 @@ def structurize(text, parsers):
     for parser in parsers:
         results.extend(find_all(parser, text))
     return results
+
+
+def set_date_for_interval(match):
+    match['parsed'] = {'date': match['parsed']['interval']['start']}
+    return match
+
+
+def set_dates_with_timezone_fixes(match, timezone):
+    tz = pytz.timezone(timezone)
+    now = datetime.now()
+    tz_hours_offset = tz.utcoffset(now).total_seconds() / 60 / 60
+
+    parsed_output_keys = list(match['parsed'].keys())
+    if 'datetime' in parsed_output_keys:
+        _datetime = str(set_timezones_for_datetime(match['parsed'], tz, tz_hours_offset))
+        match['parsed']['datetime'] = _datetime
+
+    if 'date' in parsed_output_keys:
+        match['parsed']['date'] = str(
+            set_timezones_for_date(match['parsed'], tz_hours_offset).date())
+
+    if 'interval' in parsed_output_keys:
+        for boundary in ['start', 'end']:
+            if 'date' in match['parsed']['interval'][boundary]:
+                _date = str(
+                    set_timezones_for_date(match['parsed']['interval'][boundary],
+                                           tz_hours_offset).date())
+                match['parsed']['interval'][boundary] = _date
+            if 'datetime' in match['parsed']['interval'][boundary]:
+                _datetime = str(
+                    set_timezones_for_datetime(match['parsed']['interval'][boundary], timezone,
+                                               tz_hours_offset))
+                match['parsed']['interval'][boundary] = _datetime
+
+    if 'utc' in parsed_output_keys:
+        del match['parsed']['utc']
+    if 'tz_threshold' in parsed_output_keys:
+        del match['parsed']['tz_threshold']
+        del match['parsed']['days_delta']
+
+
+def set_timezones_for_datetime(match, tz, tz_hours_offset):
+    matched_datetime = date_parser.parse(match['datetime'])
+    non_utc_datetime = matched_datetime
+    if match.get('utc'):
+        utc_tz = pytz.timezone('UTC')
+        utc_datetime = utc_tz.localize(matched_datetime)
+        non_utc_datetime = utc_datetime.astimezone(tz)
+    elif 'tz_threshold' in match:
+        non_utc_datetime = set_threshold(match, tz_hours_offset, 'datetime')
+    return non_utc_datetime
+
+
+def set_timezones_for_date(match, tz_hours_offset):
+    matched_date = date_parser.parse(match['date'])
+    non_utc_date = matched_date
+    if 'tz_threshold' in match:
+        non_utc_date = set_threshold(match, tz_hours_offset, 'date')
+    return non_utc_date
+
+
+def set_threshold(match, tz_hours_offset, date_label):
+    matched = date_parser.parse(match[date_label])
+    days_delta = match['days_delta']
+    tz_threshold = match['tz_threshold']
+    final = matched
+    if 0 < tz_threshold <= tz_hours_offset or 0 > tz_threshold >= tz_hours_offset:
+        final = matched + timedelta(days=days_delta)
+    return final

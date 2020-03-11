@@ -2,9 +2,8 @@ import datetime
 import re
 
 import pyparsing
-from dateutil.relativedelta import relativedelta
 from pyparsing import Optional
-
+from dateutil.relativedelta import relativedelta
 from kronosparser import utils
 from kronosparser.time_interval import TimeInterval
 from kronosparser.word_number import units
@@ -661,6 +660,7 @@ def o_clock_time_to_full(tokens):
     if tokens['hour'] < 7:  # Assumption: o'clock times between 7-18
         tokens['hour'] += 12
     return tokens
+
 
 # Grammar used to parse different times is defined below
 

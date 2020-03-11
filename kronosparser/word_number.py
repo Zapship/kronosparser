@@ -7,7 +7,6 @@ import functools
 import operator
 
 import pyparsing
-
 from kronosparser import utils
 
 
